@@ -1,142 +1,128 @@
-#carga de librerias
+#Year-by-year analysis. I create a model with 2016 and predict 2017. Adjust. Predict 2018. Adjust. Until 2023.
+#load libraries
 
-library(lmtest) #compraobación de normalidad de los errores de una regresion
-library(tibble) #Para convertir una columna en nombres de fila
+library(lmtest) #checking normality of errors in a regression
+library(tibble) #To convert a column into row names
 library(ggplot2)
-library(ggfortify)#visulalización para PCA
-library(gridExtra)#visulalización para PCA
-library(factoextra)#visulalización para PCA. Contiene fviz 
-library(corrplot) #análisis previo a PCA
-library(fastDummies) #Necesaria para el one hot encoding
-library(magrittr) #para poder utilizar el pipeline %>%
-library(dplyr) #para poder usar mutate
-library(lmtest) #comprobación de normalidad de los errores de una regresion
-library(tibble) #Para convertir una columna en nombres de fila
-library(car)#para realizar el test de Durbin Watson
+library(ggfortify) #visualization for PCA
+library(gridExtra) #visualization for PCA
+library(factoextra) #visualization for PCA. Contains fviz
+library(corrplot) #analysis prior to PCA
+library(fastDummies) #Necessary for one-hot encoding
+library(magrittr) #to use the %>% pipeline
+library(dplyr) #to use mutate
+library(lmtest) #checking normality of errors in a regression
+library(tibble) #To convert a column into row names
+library(car) #to perform the Durbin Watson test
 
-#Cargo mis funciones
+#Load my functions
 source("E:/Oscar/DataScience/Kryterion/Trabajo final/adhoc_functions.R")
- 
-#Cargo los datasets completos e imputados
 
-training_01 <- read.csv(file="E:/Oscar/DataScience/Kryterion/Trabajo final/EV Adoption USA/data/training_clean.csv")
-test_01 <-  read.csv(file="E:/Oscar/DataScience/Kryterion/Trabajo final/EV Adoption USA/data/test_clean.csv")
-
-#Codificación de la variable Party. Asigno valor 1 al partido demócrata porque sus políticas sulen ir más alineadas con el ecologismo y la lucha contra el cambio climático
-
-training_01 <- training_01 %>% mutate(Party=factor(Party, levels=c('Republican','Democratic'), labels=c(0,1)))
-test_01 <- test_01 %>% mutate(Party=factor(Party, levels=c('Republican','Democratic'), labels=c(0,1)))
-
-#la nueva columna es de tipo factor y tengo que pasarla primero a caractery luego a número porque si no da error
-
-training_01 <- training_01 %>% mutate(Party = as.numeric(as.character(Party)))
-test_01 <- test_01 %>% mutate(Party = as.numeric(as.character(Party)))
-
-#Análisis de reducción dimensional
-
-#escalado de características sin la variable index y dejando fuera la variable stado, que será lo que voy a utilizar para analizar los resultados del PCA
-
-#Voy a eliminar la columna index que no aporta nada al análisis
-
-training_02 <- training_01 %>% select_if(is.numeric)
-test_02 <- test_01 %>% select_if(is.numeric)
-
-#Elimino la variable Index ya que no aporta información de varianza o correlación al tratarse de una variable categórica (una lista numerada)
-training_02 <- training_02 %>% select(-Index)
-test_02 <- test_02 %>% select(-Index)
-
-#Voy a crear nombres de filas usando el año y el estado del dataset training_01
-
-row_names_training <- paste(training_01$state,training_01$year, sep="_")
-row.names(training_02) <- row_names_training
-row_names_test <- paste(test_01$state,test_01$year, sep="_")
-row.names(test_02) <- row_names_test
-
-#Voy a separar ambos conjuntos en datos pertenecientes a entrenamiento o test
-
-x_train <- training_02 %>% select(-EV.Share....)
-y_train <- training_02 %>% select (EV.Share....)
-
-x_test<- test_02 %>% select(-EV.Share....)
-y_test <- test_02 %>% select(EV.Share....)
+#Load the complete and imputed datasets
 
 
-map_pca_01 <- prcomp(x_train, scale = TRUE)
-summary(map_pca_01)
-
-#análisis de resultados de pca
-
-fviz_eig(map_pca_01, col.var="blue")
-fviz_pca_var(map_pca_01,
-             col.var = "cos2",
-             gradient.cols = c("darkorchid4","gold","darkorange"),
-             repel = TRUE)
-
-#Regresión con dos variables
-#Transformamos los conjuntos de datos con el nuevo mapa (PCA) creado con el conjunto de training
-
-train_pca_01 <- predict(map_pca_01, newdata = x_train)[, 1:2]
-test_pca_01 <- predict(map_pca_01, newdata = x_test)[, 1:2]
-
-#Creo el dataset con el que entrenar al modelo
-train_final_01 <- data.frame(EV.Share_predict = y_train[,1], train_pca_01)
-lm_model_2c <- lm(EV.Share_predict ~ PC1+ PC2, data=train_final_01)
-
-summary(lm_model_2c)
-linear_regression_assumptions(lm_model_2c)
-plot_confidence_intervals(lm_model_2c,train_final_01)
+ev_clean_01 <- read.csv(file="E:/Oscar/DataScience/Kryterion/Trabajo final/EV Adoption USA/data/ev_adoption_clean.csv")
 
 
-#Regresión con tres variables
-#Transformamos los conjuntos de datos con el nuevo mapa (PCA) creado con el conjunto de training
+#Encoding of the Party variable. I assign value 1 to the Democratic party because its policies are usually more aligned with environmentalism and the fight against climate change
 
-train_pca_02 <- predict(map_pca_01, newdata = x_train)[, 1:3]
-test_pca_02 <- predict(map_pca_01, newdata = x_test)[, 1:3]
-
-#Creo el dataset con el que entrenar al modelo
-train_final_02 <- data.frame(EV.Share_predict = y_train[,1], train_pca_02)
-lm_model_3c <- lm(EV.Share_predict ~ PC1+PC2+PC3, data=train_final_02)
-
-summary(lm_model_3c)
-linear_regression_assumptions(lm_model_3c)
-
-plot_confidence_intervals(lm_model_3c,train_final_02)
+ev_clean_01 <- ev_clean_01 %>% mutate(Party=factor(Party, levels=c('Republican','Democratic'), labels=c(0,1)))
 
 
-# Asumimos que 'lm_model_3c' es tu modelo y 'train_final_02' tus datos de entrenamiento
-# 1. Obtenemos las predicciones del modelo completo
-predicciones <- predict(lm_model_3c, newdata = train_final_02)
+#the new column is of type factor and I have to convert it first to character and then to number because otherwise it gives an error
 
-# 2. Creamos un data frame para el gráfico
-plot_data <- data.frame(
-  Reales = train_final_02$EV.Share_predict,
-  Predichos = predicciones
+ev_clean_01 <- ev_clean_01 %>% mutate(Party = as.numeric(as.character(Party)))
+
+
+#Dimensionality reduction analysis
+
+#scaling of features without the index variable and leaving out the state variable, which is what I will use to analyze the PCA results
+
+#I will select numeric variables for this analysis
+
+ev_clean_02 <- ev_clean_01 %>% select_if(is.numeric)
+
+#I remove the Index variable as it does not provide variance or correlation information since it is a categorical variable (a numbered list)
+ev_clean_02 <- ev_clean_02 %>% select(-Index)
+
+#I will filter the data to select 2016 data. I will delete the columns with standar deviation = 0
+
+ev_clean_2016 <- ev_clean_02 %>% filter(year=="2016")
+ev_clean_2016 <- ev_clean_2016 %>% select(-year)
+ev_clean_2016 <- ev_clean_2016 %>% select(-fuel_economy)
+
+
+#I will create row names using the  state from the ev_clean_01 dataset
+
+row_names_evclean <- ev_clean_01 %>% filter(year=="2016") %>% select(state)
+row.names(ev_clean_2016) <- row_names_evclean$state
+
+
+#I will separate both sets into dependent and not dependent variables
+
+x_train_2016 <- ev_clean_2016 %>% select(-EV.Share....)
+y_train_2016 <- ev_clean_2016 %>% select (EV.Share....)
+
+
+#I create the map to explore the variables using dimensionality reduction
+map_pca_2016 <- prcomp(x_train_2016, scale = TRUE)
+summary(map_pca_2016)
+
+train_pca_2016 <- as.data.frame(map_pca_2016$x[, 1:2])
+
+
+#I create the dataset to train the model with
+data_final_2016 <- data.frame(EV.Share_predict = y_train_2016[,1], train_pca_2016)
+lm_model_2c_2016 <- lm(EV.Share_predict ~ PC1+PC2, data=data_final_2016)
+
+summary(lm_model_2c_2016)
+#linear_regression_assumptions(lm_model_2c)
+plot_confidence_intervals(lm_model_2c,data_final_2016)
+
+#Ahora voy a utilizar el comando 'predict' para mapear los valores de 2017 en el PCA de 2016
+#I will filter the data to select 2016 data. I will delete the columns with standar deviation = 0
+
+ev_clean_2017 <- ev_clean_02 %>% filter(year=="2017") %>% select(-year,-fuel_economy)
+
+#I will create row names using the  state from the ev_clean_01 dataset
+
+row.names(ev_clean_2017) <- row_names_evclean$state
+
+
+#I will separate both sets into dependent and not dependent variables
+
+x_test_2017 <- ev_clean_2017 %>% select(-EV.Share....)
+y_test_2017 <- ev_clean_2017 %>% select (EV.Share....)
+
+# We trasform 2017 dataset with PCA previoulsy map
+test_pca_2017 <- predict(map_pca_2016, newdata = x_train_2017)[, 1:2]
+
+#Conversiont into dataframe
+test_pca_2017_df <- as.data.frame(test_pca_2017)
+
+#I use the 2016 model to predict the next year
+
+predictions_2017 <- predict(lm_model_2c_2016, newdata = test_pca_2017_df)
+
+#Evaluation
+results <- data.frame(
+  Actual_2017 = y_test_2017$EV.Share....,
+  Predicted_2017 = predictions_2017
 )
+print(head(results))
 
-# 3. Creamos el gráfico
-ggplot(plot_data, aes(x = Reales, y = Predichos)) +
-  geom_point(alpha = 0.6, color = "blue") +
-  # Añadimos la línea de 45 grados que representa una predicción perfecta
-  geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +
-  labs(
-    title = "Valores Predichos vs. Reales",
-    x = "Valores Reales (Observados)",
-    y = "Valores Predichos por el Modelo"
-  ) +
-  theme_minimal()
+#Calculation of RMSE
+rmse <- sqrt(mean((results$Actual_2017 - results$Predicted_2017)^2))
+print(paste("The prediction error (RMSE) of the 2016 model with the new data is:", rmse))
 
+# Calcula la desviación estándar de la variable objetivo de 2017
+sd_2017 <- sd(y_test_2017$EV.Share....)
+print(paste("La desviación estándar de EV.Share en 2017 es:", sd_2017))
 
-############Regresión sobre variable log(EV.Share)
+# 1. Calcula la media de EV.Share en los datos de entrenamiento (2016)
+mean_2016 <- mean(y_train_2016$EV.Share....)
 
-#Voy a separar ambos conjuntos en datos pertenecientes a entrenamiento o test
+# 2. Calcula el error de este modelo base en los datos de 2017
+rmse_baseline <- sqrt(mean((y_test_2017$EV.Share.... - mean_2016)^2))
 
-train_final_03 <- train_final_02
-filas_quitar <- c("North Dakota_2016","Mississippi_2016")
-train_final_03 <- train_final_03[! rownames(train_final_03) %in% filas_quitar ,]
-train_final_03$log_EV.Share <- log(train_final_03[,1])
-
-lm_model_log <- lm(log_EV.Share ~ PC1 + PC2 + PC3, data = train_final_03)
-summary(lm_model_log)
-
-linear_regression_assumptions(lm_model_3c)
-plot_confidence_intervals(lm_model_3c,train_final_02)
+print(paste("El RMSE del modelo base (predecir la media) es:", rmse_baseline))
