@@ -1,380 +1,380 @@
-#En este código incluiré algunas funciones para invocarlas posteriormete
+#This code will include some functions to be called later
 
-# Calculo de la moda de un conjunto de datos
+# Calculate the mode of a dataset
 
 getmode <- function(v, na.rm = FALSE) {
   
-  # Paso 1: Comprobar si el usuario quiere eliminar los valores NA.
-  # Si na.rm es TRUE, se ejecuta el código dentro del if.
+  # Step 1: Check if the user wants to remove NA values.
+  # If na.rm is TRUE, the code inside the if statement is executed.
   if (na.rm) {
-    # Filtra el vector, quedándose solo con los elementos que NO son NA.
+    # Filters the vector, keeping only the elements that are NOT NA.
     v <- v[!is.na(v)]
   }
   
-  # Paso 2 (Opcional pero recomendado): Eliminar también cadenas de texto vacías ("").
+  # Step 2 (Optional but recommended): Also remove empty text strings ("").
   v <- v[nchar(as.character(v)) > 0]
   
-  # Paso 3: Comprobación de seguridad.
-  # Si el vector está vacío después de la limpieza, no hay moda que calcular.
+  # Step 3: Safety check.
+  # If the vector is empty after cleaning, there is no mode to calculate.
   if (length(v) == 0) {
-    # Devolvemos NA para indicar que no se pudo calcular la moda.
-    # NA_character_ es un tipo específico de NA para vectores de texto.
+    # We return NA to indicate that the mode could not be calculated.
+    # NA_character_ is a specific type of NA for text vectors.
     return(NA_character_) 
   }
   
-  # Paso 4: Calcular la moda (la misma lógica que antes).
-  # Esto se ejecuta sobre el vector 'v' ya limpio (si na.rm = TRUE).
+  # Step 4: Calculate the mode (same logic as before).
+  # This is executed on the already cleaned vector 'v' (if na.rm = TRUE).
   uniqv <- unique(v)
   return(uniqv[which.max(tabulate(match(v, uniqv)))])
 }
 
-#Función para crear un pdf con la representación gráfica de las distintas varibles de un dataset. 
+#Function to create a PDF with the graphical representation of the different variables of a dataset. 
 
 print_atributes <- function(input_data){
   
-  # Cargar las librerías es una buena práctica
+  # Loading the libraries is a good practice
   library(ggplot2)
   library(dplyr)
   
-  # Abre un dispositivo PDF para guardar los gráficos
-  pdf("E:/Oscar/DataScience/Kryterion/Trabajo final/Analisis_Variables.pdf", width = 10, height = 7)
+  # Opens a PDF device to save the plots
+  pdf("E:/Oscar/DataScience/Kryterion/Trabajo final/Variable_Analysis.pdf", width = 10, height = 7)
   
-  # 3. Definir un umbral para decidir si una variable numérica es discreta o continua
-  # Si una variable numérica tiene MENOS de este número de valores únicos, haremos un diagrama de barras.
-  # Si tiene más, haremos un histograma. Puedes ajustar este valor.
+  # 3. Define a threshold to decide if a numeric variable is discrete or continuous
+  # If a numeric variable has LESS than this number of unique values, we will make a bar chart.
+  # If it has more, we will make a histogram. You can adjust this value.
   umbral_valores_unicos <- 5
 
   
-  # 4. Bucle para recorrer cada columna y generar un gráfico
-  # Itera a través de los nombres de las columnas de tu data frame
+  # 4. Loop to iterate through each column and generate a plot
+  # Iterates through the column names of your data frame
   for (nombre_columna in names(input_data)) {
 
-    # Extraemos solo la columna que nos interesa y la ponemos en un df simple.
-    # La columna dentro de este df temporal se llamará 'datos_columna'.
+    # We extract only the column we are interested in and put it in a simple df.
+    # The column within this temporary df will be called 'datos_columna'.
     plot_df <- data.frame(datos_columna = input_data[[nombre_columna]])
  
-    # Ahora construimos el ggplot usando este df temporal y un nombre de columna fijo ('datos_columna')
+    # Now we build the ggplot using this temporary df and a fixed column name ('datos_columna')
     p <- ggplot(plot_df, aes(x = datos_columna)) +
-      labs(title = paste("Distribución de", nombre_columna), x = nombre_columna, y = "Frecuencia") +
+      labs(title = paste("Distribution of", nombre_columna), x = nombre_columna, y = "Frequency") +
       theme_minimal()
     
     #print(nombre_columna)
-    # --- Lógica para decidir el tipo de gráfico ---
+    # --- Logic to decide the type of plot ---
     
-    # Si la columna es de tipo texto (character) o factor...
+    # If the column is of type character or factor...
 
     if (is.character(plot_df[,1]) || is.factor(plot_df[,1])) {
       
-      # ...hacemos un diagrama de barras.
+      # ...we make a bar chart.
       p <- p + geom_bar(fill = "steelblue", alpha = 0.8)
-      print('debuger1')
-      # Si la columna es de tipo numérico...
+      print('debugger1')
+      # If the column is of type numeric...
     } else if (is.numeric(plot_df[,1])) {
       
-      # ...comprobamos cuántos valores únicos tiene (ignorando los NAs).
+      # ...we check how many unique values it has (ignoring NAs).
       n_unicos <- length(unique(na.omit(plot_df[,1])))
 
-      print('debuger2')
-      # Si tiene menos valores únicos que nuestro umbral...
+      print('debugger2')
+      # If it has fewer unique values than our threshold...
       if (n_unicos < umbral_valores_unicos) {
-        # ...la tratamos como categórica y hacemos un diagrama de barras.
-        # Es importante convertirla a factor para que ggplot la trate como tal.
+        # ...we treat it as categorical and make a bar chart.
+        # It's important to convert it to a factor so ggplot treats it as such.
         p <- ggplot(plot_df, aes(x = factor(.data))) +
-          labs(title = paste("Distribución de", nombre_columna), x = nombre_columna, y = "Frecuencia") +
+          labs(title = paste("Distribution of", nombre_columna), x = nombre_columna, y = "Frequency") +
           theme_minimal() +
           geom_bar(fill = "skyblue", alpha = 0.8)
-        print('debuger3')
-        # Si tiene muchos valores únicos...
+        print('debugger3')
+        # If it has many unique values...
       } else {
-        # ...la tratamos como continua y hacemos un histograma.
+        # ...we treat it as continuous and make a histogram.
         p <- p + geom_histogram(bins = 30, fill = "salmon", alpha = 0.8, color="white")
-        print('debuger4')
+        print('debugger4')
       }
       
     } else {
-      # Si la columna no es ni numérica ni de texto/factor, la saltamos.
+      # If the column is neither numeric nor text/factor, we skip it.
       next
     }
     
-    # Imprimimos el gráfico. Dentro de un bucle, es necesario usar print().
+    # We print the plot. Inside a loop, it is necessary to use print().
     print(p)
 
   }
-  # Cierra el dispositivo PDF para finalizar y guardar el archivo
+  # Closes the PDF device to finalize and save the file
   dev.off()
 }
 
 
-# Función para realizar la imputación de mazo dirigida por tiempo
-# Permite introducir como vector tanto los años que serán donantes como los años que serán receptores
+# Function to perform time-driven hot-deck imputation
+# Allows introducing as a vector both the years that will be donors and the years that will be recipients
 imputar_con_tendencia <- function(valores, year, años_donante, años_receptor) {
   
-  # 1. Identificar el "mazo" de donantes: valores de 2018 y 2019 que no sean NA
+  # 1. Identify the "deck" of donors: values from 2018 and 2019 that are not NA
   mazo_donantes <- valores[year %in% años_donante & !is.na(valores)]
   
-  # 2. Comprobación de seguridad: si no hay donantes para este estado, no hacemos nada
+  # 2. Safety check: if there are no donors for this state, we do nothing
   if (length(mazo_donantes) == 0) {
-    # Devolvemos los valores originales sin cambios para este grupo
+    # We return the original values unchanged for this group
     return(valores)
   }
   
-  # 3. Identificar los índices de los valores a imputar (receptores)
+  # 3. Identify the indices of the values to be imputed (recipients)
   indices_a_imputar <- which(is.na(valores) & year %in% años_receptor)
   
-  # 4. Si hay valores para imputar, los reemplazamos
+  # 4. If there are values to impute, we replace them
   if (length(indices_a_imputar) > 0) {
-    # Para cada NA, sacamos una muestra aleatoria (con reemplazo) del mazo de donantes
+    # For each NA, we draw a random sample (with replacement) from the donor deck
     valores_imputados <- sample(mazo_donantes, size = length(indices_a_imputar), replace = TRUE)
     
-    # Reemplazamos los NAs con los nuevos valores
+    # We replace the NAs with the new values
     valores[indices_a_imputar] <- valores_imputados
   }
   
-  # 5. Devolver el vector completo con los valores ya imputados
+  # 5. Return the complete vector with the values already imputed
   return(valores)
 }
   
-  #' Imputación por Regresión Lineal Temporal por Grupo
+  #' Imputation by Temporal Linear Regression per Group
   #'
-  #' Imputa valores NA en un vector numérico ('precios') ajustando un modelo
-  #' de regresión lineal (precios ~ anios) con los datos observados y
-  #' prediciendo los valores para los NAs.
+  #' Imputes NA values in a numeric vector ('prices') by fitting a
+  #' linear regression model (prices ~ years) with the observed data and
+  #' predicting the values for the NAs.
   #'
-  #' @param precios Vector numérico con los precios (puede contener NAs).
-  #' @param anios Vector numérico con los años correspondientes a cada precio.
+  #' @param precios Numeric vector with the prices (can contain NAs).
+  #' @param anios Numeric vector with the years corresponding to each price.
   #'
-  #' @return Un vector numérico con los NAs imputados.
+  #' @return A numeric vector with the NAs imputed.
   
 imputar_regresion <- function(valores, anios) {
     
-    # 1. Crear un data frame temporal para trabajar más fácil
+    # 1. Create a temporary data frame to work more easily
     df_temporal <- data.frame(estimacion = valores, anio = anios)
     
-    # 2. Separar los datos en:
-    #    - 'entrenamiento': filas con precios observados (para construir el modelo)
-    #    - 'a_predecir': filas con precios faltantes (para usar el modelo)
+    # 2. Separate the data into:
+    #    - 'training': rows with observed prices (to build the model)
+    #    - 'to_predict': rows with missing prices (to use the model)
     entrenamiento <- df_temporal[!is.na(df_temporal$estimacion), ]
     a_predecir <- df_temporal[is.na(df_temporal$estimacion), ]
     
-    # 3. Comprobación de seguridad: si no hay datos para entrenar o nada que predecir,
-    #    o si no hay suficientes datos para una regresión (necesitamos al menos 2 puntos),
-    #    devolvemos los datos originales sin cambios para este grupo.
+    # 3. Safety check: if there is no data to train or nothing to predict,
+    #    or if there is not enough data for a regression (we need at least 2 points),
+    #    we return the original data unchanged for this group.
     if (nrow(entrenamiento) < 2 || nrow(a_predecir) == 0) {
       return(valores)
     }
     
-    # 4. Ajustar el modelo de regresión lineal: precio en función del año
+    # 4. Fit the linear regression model: price as a function of year
     modelo_lineal <- lm(estimacion ~ anio, data = entrenamiento)
     
-    # 5. Predecir los precios para los años faltantes
+    # 5. Predict the prices for the missing years
     valores_predichos <- predict(modelo_lineal, newdata = a_predecir)
     
-    # 6. Rellenar los huecos (NAs) en el vector original con las predicciones
+    # 6. Fill the gaps (NAs) in the original vector with the predictions
     valores[is.na(valores)] <- valores_predichos
     
-    # 7. Devolver el vector completo y ya imputado
+    # 7. Return the complete and already imputed vector
     return(valores)
 }
 
 
-#Version mejorada y más flexible de la función para imputar por regresión
-#' Imputación por Regresión Lineal usando años específicos para el modelo
+#Improved and more flexible version of the function to impute by regression
+#' Imputation by Linear Regression using specific years for the model
 #'
-#' @param valores Vector numérico con los datos a imputar (contiene NAs).
-#' @param anios Vector numérico con los años de cada observación.
-#' @param anios_modelo Vector numérico con los años que se usarán para entrenar el modelo de regresión.
+#' @param valores Numeric vector with the data to be imputed (contains NAs).
+#' @param anios Numeric vector with the years of each observation.
+#' @param anios_modelo Numeric vector with the years that will be used to train the regression model.
 
 imputar_regresion_filtrada <- function(valores, anios, anios_modelo) {
   
-  # 1. Crear un data frame temporal
+  # 1. Create a temporary data frame
   df_temporal <- data.frame(valor = valores, anio = anios)
   
-  # 2. Definir el conjunto de entrenamiento usando SOLO los años especificados
+  # 2. Define the training set using ONLY the specified years
   entrenamiento <- df_temporal[!is.na(df_temporal$valor) & df_temporal$anio %in% anios_modelo, ]
   
-  # 3. Identificar las filas que necesitan ser predichas (todas las que tienen NA)
+  # 3. Identify the rows that need to be predicted (all those with NA)
   a_predecir <- df_temporal[is.na(df_temporal$valor), ]
   
-  # 4. Comprobación de seguridad
+  # 4. Safety check
   if (nrow(entrenamiento) < 2 || nrow(a_predecir) == 0) {
     return(valores)
   }
   
-  # 5. Ajustar el modelo de regresión lineal
+  # 5. Fit the linear regression model
   modelo_lineal <- lm(valor ~ anio, data = entrenamiento)
   
-  # 6. Predecir los precios para los años faltantes
+  # 6. Predict the prices for the missing years
   valores_predichos <- predict(modelo_lineal, newdata = a_predecir)
   
-  # 7. Rellenar los NAs
+  # 7. Fill the NAs
   valores[is.na(valores)] <- valores_predichos
   
-  # 8. Devolver el vector imputado
+  # 8. Return the imputed vector
   return(valores)
 }
 
-#' Imputación Híbrida: Regresión con Fallback a Media/Mediana
+#' Hybrid Imputation: Regression with Fallback to Mean/Median
 #'
-#' Imputa valores NA. Si hay suficientes datos (>=2), usa regresión lineal (valor ~ anio).
-#' Si hay pocos datos (>0 pero <2), usa la mediana de los valores disponibles como fallback.
+#' Imputes NA values. If there is enough data (>=2), it uses linear regression (value ~ year).
+#' If there is little data (>0 but <2), it uses the median of the available values as a fallback.
 #'
-#' @param valores Vector numérico con los datos a imputar.
-#' @param anios Vector numérico con los años correspondientes.
+#' @param valores Numeric vector with the data to be imputed.
+#' @param anios Numeric vector with the corresponding years.
 #'
-#' @return Un vector numérico con los NAs imputados.
+#' @return A numeric vector with the NAs imputed.
 
 imputar_hibrido_regresion <- function(valores, anios) {
   
-  # 1. Crear un data frame temporal
+  # 1. Create a temporary data frame
   df_temporal <- data.frame(estimacion = valores, anio = anios)
   
-  # 2. Separar datos de entrenamiento y datos a predecir
+  # 2. Separate training data and data to be predicted
   entrenamiento <- df_temporal[!is.na(df_temporal$estimacion), ]
   a_predecir <- df_temporal[is.na(df_temporal$estimacion), ]
   
-  # 3. Comprobación inicial: si no hay nada que imputar, salimos.
+  # 3. Initial check: if there is nothing to impute, we exit.
   if (nrow(a_predecir) == 0) {
     return(valores)
   }
   
-  # --- LÓGICA HÍBRIDA MEJORADA ---
+  # --- IMPROVED HYBRID LOGIC ---
   
-  # CASO 1: Hay suficientes datos para una regresión
+  # CASE 1: There is enough data for a regression
   if (nrow(entrenamiento) >= 2) {
     
-    # Mensaje para saber qué método se está usando (útil para depurar)
-    # message("Usando regresión lineal...")
+    # Message to know which method is being used (useful for debugging)
+    # message("Using linear regression...")
     
     modelo_lineal <- lm(estimacion ~ anio, data = entrenamiento)
     valores_predichos <- predict(modelo_lineal, newdata = a_predecir)
     valores[is.na(valores)] <- valores_predichos
     return(valores)
     
-    # CASO 2 (FALLBACK): Hay algún dato, pero no suficientes para regresión (es decir, solo 1)
+    # CASE 2 (FALLBACK): There is some data, but not enough for regression (i.e., only 1)
   } else if (nrow(entrenamiento) > 0) {
     
-    # message("Insuficientes datos para regresión. Usando fallback a la mediana.")
+    # message("Insufficient data for regression. Using fallback to the median.")
     
-    # Calculamos la mediana de los pocos datos que tenemos (si solo hay uno, será ese mismo valor)
+    # We calculate the median of the few data we have (if there is only one, it will be that same value)
     valor_de_relleno <- median(entrenamiento$estimacion, na.rm = TRUE)
     
-    # Rellenamos todos los NAs con ese único valor
+    # We fill all NAs with that single value
     valores[is.na(valores)] <- valor_de_relleno
     return(valores)
     
-    # CASO 3: No hay ningún dato de entrenamiento
+    # CASE 3: There is no training data at all
   } else {
-    # No podemos hacer nada, devolvemos los datos tal como estaban
-    # message("No hay datos disponibles para imputar.")
+    # We can't do anything, we return the data as it was
+    # message("No data available to impute.")
     return(valores)
   }
 }
 
-#Función para crear un pdf con la representación gráfica de los boxplots de las distintas variables.
+#Function to create a PDF with the graphical representation of the boxplots of the different variables.
 
 print_boxplots <- function(input_data, ruta_completa_pdf) {
   
-  # Cargar las librerías necesarias
+  # Load necessary libraries
   library(ggplot2)
   library(dplyr)
   
-  # 1. Identificar solo las columnas que son numéricas
+  # 1. Identify only the columns that are numeric
   columnas_numericas <- names(input_data)[sapply(input_data, is.numeric)]
   
-  # Mensaje informativo
-  message(paste("Se generarán boxplots para", length(columnas_numericas), "variables numéricas."))
+  # Informative message
+  message(paste("Boxplots will be generated for", length(columnas_numericas), "numeric variables."))
   
-  # 2. Abrir el dispositivo PDF para guardar los gráficos
+  # 2. Open the PDF device to save the plots
   pdf(ruta_completa_pdf, width = 8, height = 6)
   
-  # 3. Bucle para recorrer cada columna numérica
+  # 3. Loop to iterate through each numeric column
   for (nombre_columna in columnas_numericas) {
     
-    # Mensaje para ver el progreso en la consola
-    message(paste("Creando boxplot para:", nombre_columna))
+    # Message to see the progress in the console
+    message(paste("Creating boxplot for:", nombre_columna))
     
-    # Creamos el gráfico usando tryCatch para evitar que un error detenga todo
+    # We create the plot using tryCatch to prevent an error from stopping everything
     tryCatch({
       
-      p <- ggplot(input_data, aes(x = "", y = .data[[nombre_columna]])) + # <- La clave está aquí
+      p <- ggplot(input_data, aes(x = "", y = .data[[nombre_columna]])) + # <- The key is here
         geom_boxplot(
-          fill = "lightseagreen", # Color de relleno
+          fill = "lightseagreen", # Fill color
           alpha = 0.7,
-          outlier.color = "red",  # Resaltar los outliers en rojo
-          outlier.shape = 18,     # Cambiar la forma del punto del outlier
-          outlier.size = 2        # Hacer los outliers un poco más grandes
+          outlier.color = "red",  # Highlight outliers in red
+          outlier.shape = 18,     # Change the shape of the outlier point
+          outlier.size = 2        # Make outliers a bit larger
         ) +
         labs(
-          title = paste("Boxplot de", nombre_columna),
-          subtitle = "Para la detección de outliers",
-          x = "",                  # No necesitamos etiqueta en el eje X
+          title = paste("Boxplot of", nombre_columna),
+          subtitle = "For outlier detection",
+          x = "",                  # We don't need a label on the X-axis
           y = nombre_columna
         ) +
         theme_minimal()
       
-      # Imprimimos el gráfico en el PDF
+      # We print the plot into the PDF
       print(p)
       
     }, error = function(e) {
-      # Si ocurre un error, imprime un mensaje y continúa
-      message(paste("   -> ERROR al procesar '", nombre_columna, "'. Error:", e$message))
-    }) # Fin de tryCatch
+      # If an error occurs, print a message and continue
+      message(paste("   -> ERROR processing '", nombre_columna, "'. Error:", e$message))
+    }) # End of tryCatch
     
-  } # Fin del bucle for
+  } # End of the for loop
   
-  # 4. Cierra el dispositivo PDF para finalizar y guardar el archivo
+  # 4. Close the PDF device to finalize and save the file
   dev.off()
   
-  message(paste("Proceso finalizado. El archivo PDF ha sido creado en:", ruta_completa_pdf))
+  message(paste("Process finished. The PDF file has been created at:", ruta_completa_pdf))
 }
 
 linear_regression_assumptions <- function(regression_model) {
   
-  # --- Forzar la impresión de cada test ---
+  # --- Force the printing of each test ---
   
   cat("\n========================================================\n")
-  cat("       INICIO DE LOS DIAGNÓSTICOS DEL MODELO\n")
+  cat("       START OF MODEL DIAGNOSTICS\n")
   cat("========================================================\n\n")
   
-  # 1. Especificación (Test RESET)
-  cat("--- (1) Test RESET de Ramsey para Especificación del Modelo ---\n\n")
+  # 1. Specification (Ramsey RESET Test)
+  cat("--- (1) Ramsey RESET Test for Model Specification ---\n\n")
   print(resettest(regression_model))
   cat("\n--------------------------------------------------------\n")
   
-  # 2. Normalidad de los Residuos (Test de Shapiro-Wilk)
-  cat("--- (2) Test de Shapiro-Wilk para Normalidad de Residuos ---\n\n")
+  # 2. Normality of Residuals (Shapiro-Wilk Test)
+  cat("--- (2) Shapiro-Wilk Test for Normality of Residuals ---\n\n")
   print(shapiro.test(regression_model$residuals))
   cat("\n--------------------------------------------------------\n")
   
-  # 3. Media Cero de los Errores (Test T)
-  cat("--- (3) Test T para Media de los Residuos igual a Cero ---\n\n")
+  # 3. Zero Mean of Errors (T-Test)
+  cat("--- (3) T-Test for a Mean of Residuals equal to Zero ---\n\n")
   print(t.test(regression_model$residuals, mu = 0))
   cat("\n--------------------------------------------------------\n")
   
-  # 4. Homocedasticidad (Test de Breusch-Pagan)
-  cat("--- (4) Test de Breusch-Pagan para Homocedasticidad ---\n\n")
+  # 4. Homoscedasticity (Breusch-Pagan Test)
+  cat("--- (4) Breusch-Pagan Test for Homoscedasticity ---\n\n")
   print(bptest(regression_model))
   cat("\n--------------------------------------------------------\n")
   
-  # 5. Independencia de los Errores (Test de Durbin-Watson)
-  cat("--- (5) Test de Durbin-Watson para Autocorrelación ---\n\n")
+  # 5. Independence of Errors (Durbin-Watson Test)
+  cat("--- (5) Durbin-Watson Test for Autocorrelation ---\n\n")
   print(durbinWatsonTest(regression_model))
   
   cat("\n========================================================\n")
-  cat("        FIN DE LOS DIAGNÓSTICOS DEL MODELO\n")
+  cat("        END OF MODEL DIAGNOSTICS\n")
   cat("========================================================\n\n")
   
-  # --- Generar los gráficos ---
-  # RStudio los mostrará en la pestaña "Plots"
+  # --- Generate the plots ---
+  # RStudio will show them in the "Plots" tab
   
-  par(mfrow = c(2, 2)) # Prepara una cuadrícula de 2x2 para los gráficos
+  par(mfrow = c(2, 2)) # Prepares a 2x2 grid for the plots
   plot(regression_model)
-  par(mfrow = c(1, 1)) # Restaura la configuración a un solo gráfico
+  par(mfrow = c(1, 1)) # Restores the configuration to a single plot
 }
 
 plot_confidence_intervals <- function(regression_model,dataset){
-  #Dibujo intervalos de confianza y predicción.
-  # 2. Calcular ambos intervalos (confianza y predicción) al 95%
+  #Draw confidence and prediction intervals.
+  # 2. Calculate both intervals (confidence and prediction) at 95%
   intervalo_confianza <- predict(regression_model, interval = "confidence", level = 0.95)
   colnames(intervalo_confianza)[1:3] <- c("fit","conf_lwr","conf_upr")
   
@@ -382,37 +382,37 @@ plot_confidence_intervals <- function(regression_model,dataset){
   intervalo_prediccion <- intervalo_prediccion[,-1]
   colnames(intervalo_prediccion)[1:2] <- c("pred_lwr","pred_upr")
   
-  # 3. Añadir estos intervalos a nuestro data frame original
+  # 3. Add these intervals to our original data frame
   total_data_con_intervalos <- cbind(dataset, intervalo_confianza, intervalo_prediccion)
   
   
-  # Vemos cómo ha quedado el data frame
+  # We see how the data frame looks
   head(total_data_con_intervalos)
   
-  #Creamos el gráfico con ggplot
+  #Create the plot with ggplot
   ggplot(total_data_con_intervalos, aes(x = PC1, y = dataset[,1])) +
     
-    # Capa 1: Intervalo de Predicción (la banda más ancha)
+    # Layer 1: Prediction Interval (the wider band)
     geom_ribbon(aes(ymin = pred_lwr, ymax = pred_upr), 
                 fill = "green", 
                 alpha = 0.2) +
     
-    # Capa 2: Intervalo de Confianza (la banda más estrecha)
+    # Layer 2: Confidence Interval (the narrower band)
     geom_ribbon(aes(ymin = conf_lwr, ymax = conf_upr), 
                 fill = "red", 
                 alpha = 0.4) +
     
-    # Capa 3: La recta de regresión
+    # Layer 3: The regression line
     geom_line(aes(y = fit), color = "darkred", size = 1) +
     
-    # Capa 4: La nube de puntos
+    # Layer 4: The scatter plot
     geom_point(alpha = 0.6, color = "steelblue") +
     
     labs(
-      title = "Regresión con Intervalos de Confianza y Predicción",
-      subtitle = "Banda ancha = Predicción (95%), Banda estrecha = Confianza (95%)",
-      x = "Componente Principal 1 (PC1)",
-      y = "Variable Objetivo "
+      title = "Regression with Confidence and Prediction Intervals",
+      subtitle = "Wide band = Prediction (95%), Narrow band = Confidence (95%)",
+      x = "Principal Component 1 (PC1)",
+      y = "Target Variable"
     ) +
     theme_minimal()
 }
