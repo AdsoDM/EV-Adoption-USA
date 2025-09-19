@@ -33,11 +33,18 @@ ev_clean_01 <- ev_clean_01 %>% mutate(Party = as.numeric(as.character(Party)))
 
 #Expansion Window Analysis
 
+
+#Delete the fifth most importan otliers
+ev_clean_02 <- ev_clean_01
+main_outliers <- c("California","District Of Columbia","West Virginia","Texas","Florida")
+is_outlier <- ev_clean_02$state %in% main_outliers
+ev_clean_02 <- ev_clean_02[! is_outlier,]
+row_names <- paste(ev_clean_02$state,ev_clean_02$year, sep="_")
+row.names(ev_clean_02) <- row_names
+
 #scaling of features without the index variable and leaving out the state variable, which is what I will use to analyze the PCA results
 #I will select numeric variables for this analysis
-ev_clean_02 <- ev_clean_01 %>% select_if(is.numeric)
-row_names <- paste(ev_clean_01$state,ev_clean_01$year, sep="_")
-row.names(ev_clean_02) <- row_names
+ev_clean_02 <- ev_clean_02 %>% select_if(is.numeric)
 
 #I remove the Index and fuel economy variable as it does not provide variance or correlation information since it is a categorical variable (a numbered list) or a 0 variance variable like fuel_economy (in a yearly basis)
 ev_clean_02 <- ev_clean_02 %>% select(-Index,-fuel_economy)
