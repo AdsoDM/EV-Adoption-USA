@@ -1,167 +1,155 @@
-#Clusterización
+# Clusterization Analysis of Electric Vehicle Adoption in the USA
 
-#Carga de librerías
-library(factoextra)#visulalización para PCA. Contiene fviz 
-library(cluster) #funciones de clusterización
-library(ggplot2)#para construir el gráfico de afiliación política sobre los clusters
-library(dplyr)#para construir el gráfico de afiliación política sobre los clusters
-library(ggrepel) # Para etiquetas que no se solapen
+# --- 1. SETUP: Load Libraries ---
+# --------------------------------
 
-#Preparación del dataset
-
-#Cargo el dataset completo e imputado
-
-ev_clean_01 <- read.csv(file="E:/Oscar/DataScience/Kryterion/Trabajo final/EV Adoption USA/data/ev_adoption_clean.csv")
-
-#Codificación de la variable Party. Asigno valor 1 al partido demócrata porque sus políticas sulen ir más alineadas con el ecologismo y la lucha contra el cambio climático
-
-ev_clean_01 <- ev_clean_01 %>% mutate(Party=factor(Party, levels=c('Republican','Democratic'), labels=c(0,1)))
-
-#la nueva columna es de tipo factor y tengo que pasarla primero a caractery luego a número porque si no da error
-
-ev_clean_01 <- ev_clean_01 %>% mutate(Party = as.numeric(as.character(Party)))
-
-#Análisis de reducción dimensional
-
-#escalado de características sin la variable index y dejando fuera la variable stado, que será lo que voy a utilizar para analizar los resultados del PCA
-
-#Voy a eliminar la columna index que no aporta nada al análisis
-
-ev_clean_02 <- ev_clean_01 %>% select_if(is.numeric)
-ev_clean_02 <- ev_clean_02 %>% select(-Index,-year)
-
-#Voy a crear nombres de filas usando el año y el estado del dataset training_01
-
-row_names <- paste(ev_clean_01$state,ev_clean_01$year, sep="_")
-row.names(ev_clean_02) <- row_names
-
-ev_clean_pca_01 <- prcomp(ev_clean_02, scale = TRUE)
-summary(ev_clean_pca_01)
-
-#Creo una estructura de datos para trabajar
-
-pca_scores <- as.data.frame(ev_clean_pca_01$x[,1:2])
-
-cluster_data_01 <- scale(pca_scores)
-
-#calculo de distancias
-
-distance_01 <- get_dist(cluster_data_01)
-view(as.matrix(distance_01))
-fviz_dist(distance_01, gradient = list(low="#00AFBB",mid="white",high="#FC4E07"))
-
-which(as.matrix(distance_01)==min(distance_01),arr.ind=T)
-
-#modelado con  kmeans, 2 clusters
-
-k2_01 <- kmeans (cluster_data_01, centers = 2)
-sort(k2_01$cluster)
-
-#Visualización
-fviz_cluster(k2_01, data = cluster_data_01)
-
-#VOy a ver los datos solamente del año 2023 porque si no es dificil observar nada
-
-ev_clean_03 <- ev_clean_01 %>% filter(year==2023)
-ev_clean_03 <- ev_clean_03 %>% column_to_rownames(var="state")
-ev_clean_03 <- ev_clean_03 %>% select(-Index,-year)
-ev_clean_03 <- ev_clean_03 %>% select(-fuel_economy)#elimino la variable fuel economy porque es una variable anual y su valor es constante para el mismo año
-
-
-ev_clean_pca_02 <- prcomp(ev_clean_03, scale = TRUE)
-summary(ev_clean_pca_02)
-
-#Creo una estructura de datos para trabajar
-
-pca_scores_02 <- as.data.frame(ev_clean_pca_02$x[,1:2])
-
-cluster_data_02 <- scale(pca_scores_02)
-
-#calculo de distancias
-
-distance_02 <- get_dist(cluster_data_02)
-view(as.matrix(distance_02))
-fviz_dist(distance_02, gradient = list(low="#00AFBB",mid="white",high="#FC4E07"))
-
-which(as.matrix(distance_01)==min(distance_01),arr.ind=T)
-which(as.matrix(distance_01)==max(distance_01),arr.ind=T)
-
-#modelado con  kmeans, 2 clusters
-
-k2_02 <- kmeans (cluster_data_02, centers = 2)
-sort(k2_02$cluster)
-
-#Visualización
-fviz_cluster(k2_02, data = cluster_data_02)#van cambiando los clusters con cada ejecución
-
-###Voy a eliminar California ya que está 4 desviaciones típicas alejado de la media y distornsiona los resultados
-
-cluster_data_03 <- cluster_data_02[rownames(cluster_data_02) != "California",]
-k2_03 <- kmeans (cluster_data_03, centers = 2)
-fviz_cluster(k2_03, data = cluster_data_03)#van cambiando los clusters con cada ejecución
-
-#Voy a superponer la afiliación politica
-ev_clean_03_reduced <- ev_clean_03[rownames(ev_clean_03) != "California",]
-# Cargar las librerías necesarias
+# For PCA and clustering visualization
+library(factoextra)
+# For clustering algorithms like kmeans
+library(cluster)
+# For creating advanced plots
 library(ggplot2)
+# For data manipulation pipelines
 library(dplyr)
-library(ggrepel) # Para etiquetas que no se solapen
+# To prevent text labels from overlapping in plots
+library(ggrepel)
 
-# --- PASO 1: Crear el Data Frame para el Gráfico ---
-# Este data frame unirá toda la información que necesitamos.
 
-# Asumimos que estos objetos ya existen de tus pasos anteriores:
-# - cluster_data_03: La matriz con los scores de PC1 y PC2 (sin California)
-# - k2_03: El resultado de tu función kmeans()
-# - ev_clean_03_reduced: Tu data frame con la información original (sin California)
+# --- 2. DATA PREPARATION: All Years ---
+# ---------------------------------------
 
-plot_data <- as.data.frame(cluster_data_03) %>%
-  # Añadimos una columna con el clúster asignado por kmeans. Lo convertimos a factor.
-  mutate(Cluster = factor(k2_03$cluster)) %>%
-  
-  # Añadimos una columna con la afiliación política, convertida a factor con etiquetas claras.
-  mutate(Party = factor(ev_clean_03_reduced$Party,
+# Load the complete and imputed dataset
+# Note: The file path must be adjusted to your local machine.
+ev_clean_df <- read.csv(file="E:/Oscar/DataScience/Kryterion/Trabajo final/EV Adoption USA/data/ev_adoption_clean.csv")
+
+# For demonstration, let's assume 'ev_clean_df' is loaded.
+# Encoding the 'Party' variable. Assigning 1 to Democratic party, assuming
+# their policies are generally more aligned with environmental goals.
+ev_clean_df <- ev_clean_df %>%
+  mutate(Party = factor(Party, levels = c('Republican', 'Democratic'), labels = c(0, 1)))
+
+# Convert the new 'Party' factor column first to character and then to numeric
+ev_clean_df <- ev_clean_df %>%
+  mutate(Party = as.numeric(as.character(Party)))
+
+
+# --- 3. ANALYSIS ON 2023 DATA ---
+# ---------------------------------
+# The initial analysis on all years is complex to visualize.
+# We will focus on the most recent year, 2023, for a clearer picture.
+
+# Filter the dataset for the year 2023
+ev_clean_2023_df <- ev_clean_df %>%
+  filter(year == 2023)
+
+# Set the 'state' column as row names for easier identification in plots
+ev_clean_2023_df <- ev_clean_2023_df %>%
+  column_to_rownames(var = "state")
+
+# Select only numeric variables for PCA, excluding identifiers and constants
+# 'fuel_economy' is constant for a given year, so it's removed.
+numeric_data_2023 <- ev_clean_2023_df %>%
+  select_if(is.numeric) %>%
+  select(-Index, -year, -fuel_economy)
+
+
+# --- 4. DIMENSIONALITY REDUCTION: PCA ---
+# -----------------------------------------
+
+# Perform Principal Component Analysis on the scaled data
+pca_result_2023 <- prcomp(numeric_data_2023, scale = TRUE)
+summary(pca_result_2023)
+
+# Extract the scores for the first two principal components (PC1, PC2)
+pca_scores_2023 <- as.data.frame(pca_result_2023$x[, 1:2])
+
+
+# --- 5. CLUSTERING: K-MEANS ---
+# -------------------------------
+
+# Remove California, as it is a significant outlier (identified in initial analysis)
+# that can distort the clustering results for other states.
+#pca_scores_no_ca <- pca_scores_2023[rownames(pca_scores_2023) != "California", ]
+#ev_clean_no_ca <- ev_clean_2023_df[rownames(ev_clean_2023_df) != "California", ]
+
+# Scale the PCA scores before clustering
+cluster_data <- scale(pca_scores_2023)
+
+# Set a seed for reproducibility of the k-means algorithm
+set.seed(123)
+
+# Perform k-means clustering with k=2
+kmeans_result <- kmeans(cluster_data, centers = 2, nstart = 25) # nstart improves stability
+
+# --- 5.5. OUTLIER ANALYSIS: Find states most different from the mean ---
+# -----------------------------------------------------------------------
+
+# The 'cluster_data' is scaled, so its mean (centroid) is at (0,0).
+# We calculate the Euclidean distance of each state from this center point.
+# A larger distance indicates a greater deviation from the average profile.
+
+# Calculate the distance for each state from the center (0,0)
+distances_from_mean <- cluster_data %>%
+  as.data.frame() %>%
+  mutate(
+    State = rownames(.),
+    Distance = sqrt(PC1^2 + PC2^2)
+  ) %>%
+  # Arrange the states by distance in descending order
+  arrange(desc(Distance))
+
+# Display the top 4 states with the largest distance from the mean
+cat("Top 4 states with the greatest difference from the dataset mean:\n")
+print(head(distances_from_mean, 5))
+
+
+# --- 6. VISUALIZATION: Clusters and Political Affiliation ---
+# -------------------------------------------------------------
+
+# Create a consolidated data frame for plotting
+plot_data <- as.data.frame(cluster_data) %>%
+  # Add a column for the cluster assignment from k-means
+  mutate(Cluster = factor(kmeans_result$cluster)) %>%
+  # Add a column for political affiliation with clear labels
+  mutate(Party = factor(ev_clean_2023_df$Party,
                         levels = c(0, 1),
                         labels = c("Republican", "Democrat"))) %>%
-  
-  # Añadimos los nombres de los estados para poder etiquetarlos.
-  mutate(State = rownames(cluster_data_03))
+  # Add state names for labeling
+  mutate(State = rownames(cluster_data))
 
-
-# --- PASO 2: Construir el Gráfico con ggplot2 ---
-
-# Ahora creamos el gráfico capa por capa
+# Build the plot using ggplot2
 ggplot(plot_data, aes(x = PC1, y = PC2, color = Party, shape = Cluster)) +
-  
-  # Capa 1: Dibuja los puntos. 'color' y 'shape' se asignan automáticamente.
+  # Layer 1: Draw the points
   geom_point(size = 4, alpha = 0.8) +
   
-  # Capa 2 (Opcional pero recomendado): Añade elipses para los clústeres
+  # Layer 2: Add ellipses around the clusters
   stat_ellipse(aes(group = Cluster, color = NULL), linetype = "dashed", type = "norm") +
   
-  # Capa 3 (Opcional): Añade etiquetas de texto para los estados que no se solapan.
-  geom_text_repel(aes(label = State), 
-                  color = "black", # Color del texto
-                  size = 3, 
+  # Layer 3: Add non-overlapping state labels
+  geom_text_repel(aes(label = State),
+                  color = "black",
+                  size = 3,
                   show.legend = FALSE) +
   
-  # --- Personalización y Títulos ---
+  # --- Customization and Titles ---
   
-  # Personaliza los colores para que coincidan con los partidos
+  # Set custom colors to match political party conventions
   scale_color_manual(values = c("Republican" = "red", "Democrat" = "blue")) +
   
-  # Personaliza las formas (opcional, 16=círculo, 17=triángulo)
+  # Set custom shapes for the clusters (16=circle, 17=triangle)
   scale_shape_manual(values = c("1" = 16, "2" = 17)) +
   
+  # Add titles and labels
   labs(
-    title = "Análisis de Clústeres y Afiliación Política",
-    subtitle = "Color = Partido, Forma = Clúster Asignado",
-    x = "Componente Principal 1 (PC1)",
-    y = "Componente Principal 2 (PC2)",
-    color = "Afiliación Política",
-    shape = "Clúster (K-Means)"
+    title = "Cluster Analysis of US States by EV Adoption Factors (2023)",
+    subtitle = "Color = Political Party, Shape = Assigned Cluster",
+    x = "Principal Component 1 (PC1)",
+    y = "Principal Component 2 (PC2)",
+    color = "Political Affiliation",
+    shape = "K-Means Cluster"
   ) +
+  
+  # Use a clean theme and add reference lines
   theme_minimal() +
-  # Añade una línea de referencia en el origen
   geom_vline(xintercept = 0, linetype = "dotted", color = "grey") +
   geom_hline(yintercept = 0, linetype = "dotted", color = "grey")
