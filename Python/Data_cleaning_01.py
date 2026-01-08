@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
 from scipy import stats
+from pathlib import Path
 import os
 
 # Import custom functions
@@ -18,6 +19,10 @@ from adhoc_functions import (
     getmode
 )
 
+#Manage code paths
+base_path_data = Path(r"E:\Oscar\adoptionUSA\EV-Adoption-USA\data")
+data_file = base_path_data / "EV_Data.csv"
+
 # Set seed for reproducibility
 np.random.seed(123)
 
@@ -25,7 +30,7 @@ def main():
     # Load data
     # Assuming CSV is in the parent directory as per original code implication ".../EV_data.csv"
     # Adjust path as necessary relative to where this script runs
-    data_path = os.path.join(os.path.dirname(__file__), "..", "EV_data.csv")
+    data_path = data_file
     if not os.path.exists(data_path):
         print(f"Error: Data file not found at {data_path}")
         return
@@ -90,19 +95,19 @@ def main():
     # R: ifelse(is.na(Incentives), ave(Incentives, FUN = mean), Incentives)
     # ave() without grouping calculates global mean.
     mean_incentives = ev_adoption_01['Incentives'].mean()
-    ev_adoption_01['Incentives'].fillna(mean_incentives, inplace=True)
+    ev_adoption_01['Incentives'] = ev_adoption_01['Incentives'].fillna(mean_incentives)
     
     # --- Number.of.Metro.Organizing.Committees ---
     # Impute using mean of 2018, 2020 for year 2019, grouped by state
     
     def impute_metro(group):
         # Calculate mean for 2018, 2020
-        mean_val = group.loc[group['year'].isin([2018, 2020]), 'Number.of.Metro.Organizing.Committees'].mean()
+        mean_val = group.loc[group['year'].isin([2018, 2020]), 'Number of Metro Organizing Committees'].mean()
         
         # Apply logic: if year 2019 and is NA, replace
-        mask = (group['year'] == 2019) & (group['Number.of.Metro.Organizing.Committees'].isna())
+        mask = (group['year'] == 2019) & (group['Number of Metro Organizing Committees'].isna())
         if mask.any():
-            group.loc[mask, 'Number.of.Metro.Organizing.Committees'] = round(mean_val)
+            group.loc[mask, 'Number of Metro Organizing Committees'] = round(mean_val)
         return group
 
     ev_adoption_01 = ev_adoption_01.groupby('state', group_keys=False).apply(impute_metro)
@@ -211,7 +216,7 @@ def main():
     
     # 1. Prepare data for similarity (Year 2023)
     data_para_similitud = ev_adoption_01[ev_adoption_01['year'] == 2023].copy()
-    features = ['Per_Cap_Income', 'Population_20_64', 'gasoline_price_per_gallon', 'Bachelor_Attainment', 'EV.Share....']
+    features = ['Per_Cap_Income', 'Population_20_64', 'gasoline_price_per_gallon', 'Bachelor_Attainment', 'EV Share (%)']
     
     sim_data = data_para_similitud.set_index('state')[features]
     
@@ -257,7 +262,7 @@ def main():
     # --- Impute Party for all states (years 2016-2017) by Mode ---
     def impute_party_mode(group):
         mode_val = getmode(group['Party'], na_rm=True)
-        group['Party'].fillna(mode_val, inplace=True)
+        group['Party'] = group['Party'].fillna(mode_val)
         return group
 
     ev_adoption_01 = ev_adoption_01.groupby('state', group_keys=False).apply(impute_party_mode)

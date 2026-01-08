@@ -22,7 +22,10 @@ def getmode(v, na_rm=False):
     if len(v) == 0:
         return np.nan
         
-    return v.mode()[0]
+    modes = v.mode()
+    if modes.empty:
+        return np.nan
+    return modes[0]
 
 def print_atributes(input_data, output_path="Variable_Analysis.pdf"):
     """
